@@ -1,0 +1,8 @@
+# Données et secrets : ne jamais publier
+.env
+data/
+*.db
+# Divers
+node_modules/
+public/fonts/
+.DS_Store
