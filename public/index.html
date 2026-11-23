@@ -1,0 +1,211 @@
+<!doctype html><html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>{{NAME}} · {{TAGLINE}}</title>
+<meta name="description" content="{{DESCRIPTION}}">
+<meta property="og:type" content="website"><meta property="og:locale" content="fr_FR"><meta property="og:site_name" content="{{NAME}}">
+<meta property="og:title" content="{{NAME}} · {{TAGLINE}}">
+<meta property="og:description" content="{{DESCRIPTION}}">
+<meta property="og:url" content="{{SITE_URL}}/"><meta property="og:image" content="{{SITE_URL}}/og.png"><meta property="og:image:width" content="1200"><meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22%3E%3Ctext y=%22.9em%22 font-size=%2290%22%3E%F0%9F%9A%97%3C/text%3E%3C/svg%3E">
+<link rel="manifest" href="/manifest.webmanifest"><meta name="theme-color" content="{{THEME_COLOR}}">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png"><meta name="apple-mobile-web-app-title" content="{{NAME}}">
+<link rel="stylesheet" href="/style.css">
+<!-- Thème : choisi dans /admin (lavande, ardoise ou journal) -->
+<link rel="stylesheet" href="/skins/{{SKIN}}.css"></head><body>
+<header><h1>{{NAME_HTML}}</h1><p class="mousse" id="mousse"></p><p class="tag">{{TAGLINE_HTML}}</p></header>
+<nav><div></div></nav><main></main><dialog id="dlg"></dialog>
+<script>
+const $=s=>document.querySelector(s),esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const DJ=['L','M','M','J','V','S','D'],H={'content-type':'application/json'};
+const TABS=[['trains','<span class="ic">🚆</span>Transport'],['offer','<span class="ic">🚗</span>Trajets dispo'],['request','<span class="ic">🙋</span>Demande de trajets'],['faq','<span class="ic">ℹ️</span>À propos']];
+let CITIES=[],F={from:'',to:''},tab='trains',BUS=null,BC='',SORT='date',DEP={},CFG={};
+
+// Appel API : renvoie le JSON, ou lève une erreur avec un message lisible.
+async function api(url,opt={}){let r;
+ try{r=await fetch(url,{...opt,headers:opt.body?H:undefined})}catch{throw new Error('Pas de connexion. Réessaie dans un instant.')}
+ const j=r.status===204?{}:await r.json().catch(()=>({}));
+ if(!r.ok)throw new Error(j.error||'Erreur, réessaie dans un instant.');return j}
+// Statistiques anonymes (aucun cookie) : visite et clics sur les moyens de contact.
+const track=(type,ad)=>{try{navigator.sendBeacon('/api/ev',new Blob([JSON.stringify({type,ad})],{type:'application/json'}))}catch{}};
+document.addEventListener('click',e=>{const a=e.target.closest('[data-ev]');if(a)track(a.dataset.ev,+a.dataset.ad||undefined)});
+
+// Réglages du site (nom, villes, phrases, textes…) : tout vient de /api/config, modifiable dans /admin.
+const READY=api('/api/config').then(c=>{CFG=c;const ci=c.cities||[];CITIES=ci.map(x=>x.n);DEP=Object.fromEntries(ci.map(x=>[x.n,x.d]));
+ // Petite phrase sous le titre, tirée au hasard à chaque chargement.
+ const l=c.phrase?.list||[];if(l.length)$('#mousse').textContent=`${c.phrase.prefix} ${l[Math.floor(Math.random()*l.length)]}`.trim()}).catch(()=>{});
+$('nav div').innerHTML=TABS.map(([k,l])=>`<button data-k="${k}">${l}</button>`).join('');
+$('nav').onclick=e=>{const b=e.target.closest('button');if(b)show(b.dataset.k)};
+async function show(k){tab=k;document.querySelectorAll('nav button').forEach(b=>b.classList.toggle('on',b.dataset.k===k));
+ try{await READY;const h=await VIEWS[k](k);if(tab===k){$('main').innerHTML=h;marquee()}}catch{$('main').innerHTML='<p class="mut">Chargement impossible. Réessaie dans un instant.</p>'}}
+
+// Nom de gare trop long : il défile en aller-retour (seulement s'il dépasse).
+function marquee(){document.querySelectorAll('.tt i').forEach(i=>{const sp=i.firstElementChild;if(!sp)return;
+ i.classList.remove('mq');const d=Math.ceil(sp.getBoundingClientRect().width-i.clientWidth);
+ if(d>1){i.style.setProperty('--d',-(d+8)+'px');i.style.setProperty('--t',(2.5+d/18).toFixed(1)+'s');i.classList.add('mq')}})}
+document.fonts?.ready.then(marquee);if(document.fonts)document.fonts.onloadingdone=marquee;addEventListener('resize',marquee);
+
+/* --- Ajouter à l'écran d'accueil --- */
+let INSTALL=null;
+addEventListener('beforeinstallprompt',e=>{e.preventDefault();INSTALL=e;if(tab==='faq')show('faq')});
+addEventListener('appinstalled',()=>{INSTALL=null;if(tab==='faq')show('faq')});
+if('serviceWorker'in navigator)navigator.serviceWorker.register('/sw.js').catch(()=>{});
+const STANDALONE=()=>matchMedia('(display-mode: standalone)').matches||navigator.standalone===true;
+const IOS=/iphone|ipad|ipod/i.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
+const A2HS=()=>STANDALONE()?'':`<div class="a2hs"><button class="btn pri" onclick="install(this)">📲 Ajouter à l’écran d’accueil</button><p class="mut" id="a2hs-help" hidden></p></div>`;
+async function install(b){
+ if(INSTALL){INSTALL.prompt();const r=await INSTALL.userChoice.catch(()=>({}));if(r.outcome==='accepted')b.parentElement.remove();INSTALL=null;return}
+ const h=$('#a2hs-help');h.hidden=false;
+ h.innerHTML=IOS?'Sur iPhone : touche le bouton <b>Partager</b> (le carré avec une flèche ↑) en bas de Safari, puis <b>« Sur l’écran d’accueil »</b>.'
+  :'Ouvre le menu du navigateur (<b>⋮</b> en haut à droite), puis <b>« Ajouter à l’écran d’accueil »</b> ou <b>« Installer l’application »</b>.'}
+
+/* --- Bus --- */
+const busSrc=()=>BUS.sources?.[BC]?`Horaires indicatifs, source <a href="${esc(BUS.sources[BC])}" target="_blank" rel="noopener">${esc(BUS.sourceName||'fiche horaire')}</a>.`:'';
+const SOON_HTML=()=>`<div class="soon"><b>Bientôt ?</b>${BUS?.soonLink?`<a href="${esc(BUS.soonLink)}" target="_blank" rel="noopener">${esc(BUS.soonLabel||'En savoir plus')}</a>`:''}</div>`;
+async function busBox(){BUS??=await api('/api/bus').catch(()=>({}));const SOON=SOON_HTML();
+ const stops=BUS.arrets||[],soon=BUS.bientot||[];if(!stops.length&&!soon.length)return `<section class="bus soon"><h2>🚌 Bus</h2>${SOON}</section>`;
+ if(![...stops,...soon].includes(BC))BC=stops[0]||soon[0];
+ return `<section class="bus"><h2>🚌 Bus · prochains départs</h2><select aria-label="Arrêt" onchange="BC=this.value;$('#bout').innerHTML=busOut();$('#bsrc').innerHTML=busSrc()">${[...stops,...soon].map(c=>`<option${c===BC?' selected':''}>${esc(c)}</option>`).join('')}</select><div id="bout">${busOut()}</div><p id="bsrc" class="bsrc">${busSrc()}</p></section>`}
+const WD=['dim.','lun.','mar.','mer.','jeu.','ven.','sam.'];
+const bl=a=>a.o===0?(a.x===0?'maintenant':a.x<60?`dans ${a.x} min`:`dans ${Math.floor(a.x/60)} h ${String(a.x%60).padStart(2,'0')}`):a.o===1?'demain '+a.t:WD[a.wd]+' '+a.t;
+// Calendrier liO : période du jour (S = scolaire, V = petites vacances, E = été ; null = pas de service, ex. 1er mai).
+// Heure française, quel que soit le fuseau du navigateur.
+// FR() donne l'heure murale à Paris ; FRday(o) le jour J+o (UTC sert juste de calendrier neutre).
+const FR=()=>{const p=Object.fromEntries(new Intl.DateTimeFormat('en-GB',{timeZone:'Europe/Paris',year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',hourCycle:'h23'}).formatToParts(new Date()).map(x=>[x.type,+x.value]));return{y:p.year,m:p.month,d:p.day,min:p.hour*60+p.minute}};
+const FRday=(o=0,f=FR())=>{const d=new Date(Date.UTC(f.y,f.m-1,f.d+o));return{iso:d.toISOString().slice(0,10),wd:d.getUTCDay(),t:+d}};
+const periodOf=iso=>['S','V','E'].find(p=>(BUS.periodes?.[p]||[]).some(([a,b])=>iso>=a&&iso<=b))||null;
+const town=s=>s.split(' · ')[0],place=s=>s.split(' · ').slice(1).join(' · ');
+// Le car circule-t-il ce jour-là ? Jours fériés : seuls les cars « D+JF » roulent.
+const runs=(t,iso,di,per)=>per&&((BUS.feries||[]).includes(iso)?!!t.ferie:(t.days||[]).includes(di))&&(!t.periods||t.periods.includes(per));
+// L'arrêt est-il desservi ce jour-là ? (cases « lundi uniquement », « période scolaire uniquement », etc.)
+const served=(st,di,per)=>{const x=st[2];return !x||((!x.days||x.days.includes(di))&&(!x.periods||x.periods.includes(per)))};
+let BOUT=[];  // départs calculés : [[direction, [départ, départ…]], …]
+const WDL=['Dimanche','Lundi','Mardi','Mercredi','Jeudi','Vendredi','Samedi'];
+const short=a=>a.o===0?a.t0:a.o===1?'dem. '+a.t0:WD[a.wd]+' '+a.t0;
+function busOut(){if((BUS.bientot||[]).includes(BC))return SOON_HTML();
+ const f=FR(),nm=f.min,R={};
+ for(let o=0;o<8;o++){const{iso,wd}=FRday(o,f),di=(wd+6)%7,per=periodOf(iso);if(!per)continue;
+  for(const t of BUS.trips||[]){if(!runs(t,iso,di,per))continue;
+   const st=t.stops.filter(s=>served(s,di,per));
+   const k=st.findIndex(s=>town(s[0])===BC);  // premier arrêt du car dans la commune
+   if(k<0||st.slice(k+1).every(s=>town(s[0])===BC))continue;
+   const[h,m]=st[k][1].split(':').map(Number),x=o*1440+h*60+m-nm;if(x<0)continue;
+   (R[t.direction]??=[]).push({x,o,wd,st,k,t0:st[k][1]})}}
+ BOUT=Object.entries(R).map(([dir,l])=>[dir,l.sort((a,b)=>a.x-b.x).filter((a,i,l)=>!i||a.x!==l[i-1].x).slice(0,6)]).sort((a,b)=>a[1][0].x-b[1][0].x);
+ return BOUT.map(([dir,l],di)=>{const a=l[0];
+  return `<details class="bdd"><summary><span class="to">Vers ${esc(dir)}<small>${where(a,dir)}</small></span><span class="ts"><b>${bl({...a,t:a.t0})}</b></span><span class="chev"></span></summary>${l.length>1?`<div class="nxt">${l.map((b,i)=>`<button class="${i?'':'on'}" onclick="busPick(this,${di},${i})">${esc(short(b))}</button>`).join('')}</div>`:''}<div class="bt">${busLine(a,dir)}</div></details>`}).join('')||'<p>Pas de départ dans les 7 prochains jours.</p>'}
+const where=(a,dir)=>{const last=a.st[a.st.length-1][0];return esc(place(a.st[a.k][0]))+(town(last)!==dir?` · jusqu’à ${esc(town(last))}`:'')};
+const busLine=(a,dir)=>`<p class="when">${a.o?(a.o===1?'Demain':WDL[a.wd])+' · ':''}${where(a,dir)}</p><ol class="tl">${a.st.slice(a.k).map(([s,t],i)=>`<li class="${i?'':'cur'}"><span>${esc(t)}</span>${esc(s)}</li>`).join('')}</ol>`;
+function busPick(btn,di,i){const [dir,l]=BOUT[di];btn.parentElement.querySelectorAll('button').forEach((b,j)=>b.classList.toggle('on',j===i));btn.closest('details').querySelector('.bt').innerHTML=busLine(l[i],dir)}
+const busUpd=()=>{const o=$('#bout');if(o&&!o.querySelector('details[open]'))o.innerHTML=busOut()};setInterval(busUpd,30000);
+
+/* --- Annonces factices (tant qu'il y a moins de 3 vraies annonces) --- */
+const dISO=n=>FRday(n).iso;
+const FD='Ceci est une annonce factice le temps que le site se remplisse, bla bla bla.';
+const FAKES=()=>{const f=(name,date,days,time,from_city,to_city,seats)=>({fake:1,name,date,days:JSON.stringify(days),time,from_city,to_city,seats,description:FD});
+ const C=i=>CITIES.length?CITIES[(i*7)%CITIES.length]:'Ici';return{
+ offer:[f('Yolande',dISO(3),[],'09:15',C(1),C(2),3),f('Louis',null,[3,4],'08:15',C(3),C(4),1),f('John',dISO(1),[],'18:00',C(5),'Londres',2)],
+ request:[f('Marie',dISO(2),[],'08:00',C(6),C(7),1),f('Julie',null,[3],'14:00',C(8),C(9),2),f('Jean-Luc',dISO(12),[],'13:12',C(10),C(11),1)]}};
+
+const MO=()=>Math.max(1,Math.round((CFG.archive||365)/30.4));
+const mail=()=>CFG.contact?`<div class="mail"><a href="mailto:${esc(CFG.contact)}">✉️ ${esc(CFG.contact)}</a></div>`:'<p class="mut">Adresse de contact pas encore configurée.</p>';
+const VIEWS={
+ async trains(){let tr='';
+  try{const {stations}=await api('/api/trains');
+   tr=`<section class="board"><h2>🚆 Train</h2>${stations.map(g=>`<h3 class="st">Gare de ${esc(g.name)}${g.url?` <a class="all" href="${esc(g.url)}" target="_blank" rel="noopener">Tous les prochains trains ↗</a>`:''}</h3>${g.error?'<p class="mut">Horaires SNCF indisponibles pour le moment.</p>':g.groups.map(d=>`<div class="bd"><span class="to">${esc(d.label)}${d.cancelled?.length?`<small class="cx">Supprimé : ${d.cancelled.map(t=>`<s>${esc(t)}</s>`).join(', ')}</small>`:''}</span><span class="ts">${[0,1].map(i=>{const t=d.times[i];return t?`<div class="tt"><b>${esc(t.time)}${t.delay>0?`<small>+${+t.delay}</small>`:''}</b><i title="${esc((t.car?'Car de remplacement · ':'')+(t.partial?'Trajet partiel · ':'')+t.dest)}"><span>${t.car?'🚌 ':''}${t.partial?'⚠ ':''}${esc(t.dest)}</span></i></div>`:`<div class="tt">${i?'':'<b>—</b>'}</div>`}).join('')}</span></div>`).join('')}`).join('')}<p class="upd">Mis à jour chaque minute, retards et suppressions inclus. 🚌 = car de remplacement.</p></section>`}
+  catch{tr='<p class="mut">Horaires SNCF indisponibles pour le moment.</p>'}
+  return tr+await busBox()},
+ offer:k=>ads(k),request:k=>ads(k),
+ async faq(){const gares=(CFG.stations||[]).join(', ').replace(/, ([^,]*)$/,' et $1');
+ return `${A2HS()}${CFG.about||''}
+ <h2>Fonctionnement</h2><ol>
+ <li><b>Transports</b> : ${gares?`les prochains départs des gares de ${esc(gares)}, et `:''}les prochains bus qui passent par là.</li>
+ <li><b>Trajets dispo / Demande de trajets</b> : les annonces, filtrables par ville de départ et d’arrivée.</li>
+ <li><b>Touche une annonce</b> pour voir la description et le bouton « Contacter » (appel, WhatsApp ou Telegram).</li>
+ <li><b>Ajouter</b> : tu remplis le formulaire, puis tu partages ton numéro au bot Telegram. Tu reçois un code secret.</li>
+ <li><b>Modifier</b> : avec ton code secret, sur le site. Code perdu ? Envoie <b>/mesannonces</b> au bot Telegram : il t’en donne un nouveau, et tu peux aussi supprimer ton annonce depuis là.</li>
+ <li><b>Les annonces disparaissent</b> toutes seules une fois la date passée. Les annonces hebdomadaires durent ${CFG.recurring||60} jours, le bot te propose ensuite de les prolonger.</li></ol>
+ <h2>Un souci avec quelqu’un ?</h2><p>Un·e conducteur·rice ou un·e passager·ère s’est mal comporté·e, une annonce te paraît louche ? Dis-le nous, même si ça te semble pas grand-chose. Touche le lien « Signaler » sous l’annonce, ou écris-nous en précisant le prénom, le trajet et la date. On lit tout, on ne transmet pas ton nom à la personne signalée, et on peut retirer l’annonce. Les annonces supprimées restent archivées ${MO()} mois justement pour pouvoir traiter les signalements.</p>
+ <p class="mut">En cas de danger ou d’agression, appelle le 17 (ou le 112).</p>${mail()}
+ <h2>Sécurité et responsabilité</h2>
+ <p>Le site met les gens en relation, c’est tout : on ne vérifie ni les permis, ni les véhicules, ni les assurances. Partager les frais (essence, péage) c’est ok ; au-delà, c’est du transport payant, interdit, et ton assurance pourrait ne pas te couvrir. Pour un premier trajet : retrouvez-vous dans un lieu public et préviens un·e proche.</p>
+ <h2>Données personnelles (RGPD)</h2>
+ <p>On garde ton prénom, ton trajet et ton numéro de mobile (avec ton pseudo Telegram), uniquement pour te mettre en relation. Ton numéro n’est montré qu’à la personne qui clique sur « Contacter ». Rien n’est vendu ni transmis.</p>
+ <p>L’annonce reste en ligne jusqu’à sa date ou jusqu’à ce que tu la supprimes, puis elle est archivée ${MO()} mois (pour traiter d’éventuels signalements) avant d’être anonymisée. Pour consulter ou effacer tes données, écris-nous.</p>
+ ${CFG.aboutEnd||''}
+ <h2>Contact</h2>${mail()}
+ <p class="legal">Mentions légales — Éditeur : ${esc(CFG.editor||'—')}${CFG.contact?`, ${esc(CFG.contact)}`:''}. Hébergement : ${esc(CFG.hosting||'—')}.</p>`}};
+
+// Prochain départ d'une annonce, en heure française (pour le tri).
+const nextOcc=a=>{const[h,m]=a.time.split(':').map(Number),f=FR(),d=JSON.parse(a.days),x=(h*60+m)*6e4;
+ if(!d.length)return Date.parse(a.date+'T00:00Z')+x;
+ for(let o=0;o<8;o++){const j=FRday(o,f);if(d.includes((j.wd+6)%7)&&(o||h*60+m>=f.min))return j.t+x}return 9e15};
+const fk=()=>{alert('Annonce exemple : ce bouton ne fait rien.');return false};
+async function ads(kind){const real=await api('/api/ads?kind='+kind);
+ const pool=[...real,...FAKES()[kind].slice(0,Math.max(0,3-real.length))];
+ // Filtres : seulement les villes où il y a effectivement des annonces (départs pour « Départ », arrivées pour « Arrivée »).
+ const opts=k=>[...new Set([...pool.map(a=>k==='from'?a.from_city:a.to_city),F[k]].filter(Boolean))].sort((a,b)=>a.localeCompare(b,'fr'));
+ const sel=(k,l)=>`<select aria-label="${l}" onchange="F.${k}=this.value;show(tab)"><option value="">${l}</option>${opts(k).map(c=>`<option value="${esc(c)}"${c===F[k]?' selected':''}>${esc(c)}</option>`).join('')}</select>`;
+ const shown=pool.filter(a=>(!F.from||a.from_city===F.from)&&(!F.to||a.to_city===F.to)).sort(SORT==='new'?(x,y)=>(y.id||0)-(x.id||0):(x,y)=>nextOcc(x)-nextOcc(y));
+ return `<div class="filters">${sel('from','Départ : partout')}${sel('to','Arrivée : partout')}<select aria-label="Tri" onchange="SORT=this.value;show(tab)"><option value="date"${SORT==='date'?' selected':''}>Trier : date de départ</option><option value="new"${SORT==='new'?' selected':''}>Trier : plus récentes</option></select></div>`+(shown.length?shown.map(row).join(''):'<p class="mut">Aucune annonce pour ce trajet. Ajoute-la.</p>')+
+ `<div class="foot"><button class="btn" onclick="openEdit()">Modifier</button><button class="btn pri" onclick="openForm('${kind}')">Ajouter</button></div>`}
+function row(a){const d=JSON.parse(a.days),seats=+a.seats||1;
+ const when=d.length?`<span class="days">${DJ.map((l,i)=>`<i class="${d.includes(i)?'on':''}">${l}</i>`).join('')}</span>`:`<span class="when">${new Date(a.date+'T12:00').toLocaleDateString('fr-FR',{weekday:'long',day:'numeric',month:'long'})}</span>`;
+ const rep=CFG.contact&&!a.fake?`<a class="rep" data-ev="report" data-ad="${a.id}" href="mailto:${esc(CFG.contact)}?subject=${encodeURIComponent(`Signalement annonce n°${a.id} (${a.name}, ${a.from_city} → ${a.to_city})`)}">🚩 Signaler</a>`:'';
+ return `<details class="ad${a.fake?' fake':''}"><summary><span class="tm">${esc(a.time.replace(':','h'))}</span><span class="mid"><span class="nm">${esc(a.name)}${a.fake?'<em>Exemple</em>':''}</span><span class="rt">${esc(a.from_city)} <b>→</b> ${esc(a.to_city)}</span>${when}</span><span class="seats">${seats}<small>place${seats>1?'s':''}</small></span><span class="chev"></span></summary>
+ <div class="more"><p>${esc(a.description)||'<span class="mut">Pas de description.</span>'}</p>${a.fake?'<div class="btns"><a href="#" onclick="return fk()">📞 Appeler</a><a href="#" onclick="return fk()">💬 WhatsApp</a><a href="#" onclick="return fk()">✈️ Telegram</a></div>':`<div class="btns"><button class="btn pri" onclick="contact(this,${+a.id})">Contacter</button></div>`}${rep}</div></details>`}
+async function contact(b,id){b.disabled=true;
+ try{const {phone,tg,contact:c}=await api(`/api/ads/${id}/contact`),n=(phone||'').replace(/\D/g,''),w=(c||'tel,wa,tg').split(',');
+  b.parentElement.innerHTML=(w.includes('tel')&&phone?`<a data-ev="tel" data-ad="${id}" href="tel:${esc(phone)}">📞 Appeler</a>`:'')+(w.includes('wa')&&n?`<a data-ev="wa" data-ad="${id}" href="https://wa.me/${n}" target="_blank" rel="noopener">💬 WhatsApp</a>`:'')+(w.includes('tg')&&(tg||n)?`<a data-ev="tg" data-ad="${id}" href="${tg?'https://t.me/'+encodeURIComponent(tg):'https://t.me/+'+n}" target="_blank" rel="noopener">✈️ Telegram</a>`:'')}
+ catch(e){b.disabled=false;b.textContent=e.message}}
+
+const citySel=(n,v)=>{const ok=!v||CITIES.includes(v);return `<label>${n==='from'?'Ville de départ':'Ville d’arrivée'}<select name="${n}" required onchange="this.nextElementSibling.hidden=this.value!=='__'"><option value="" disabled${v?'':' selected'}>Choisir…</option><option value="__"${ok?'':' selected'}>Autre…</option>${CITIES.map(c=>`<option value="${esc(c)}"${c===v?' selected':''}>${esc(c)}${DEP[c]?` (${DEP[c]})`:''}</option>`).join('')}</select><input name="${n}_x" placeholder="Nom de la ville" maxlength="40" value="${ok?'':esc(v)}"${ok?' hidden':''}></label>`};
+function openForm(kind,ad,code){
+ if(!ad&&CFG.publish===false)return alert('La publication est momentanément indisponible. Réessaie plus tard.');
+ const d=ad?JSON.parse(ad.days):[],rec=d.length>0,cs=(ad?.contact||'tel,wa,tg').split(',');kind=ad?.kind||kind;
+ $('#dlg').innerHTML=`<form id="f"><h3>${ad?'Modifier l’annonce':kind==='offer'?'Proposer un trajet':'Demander un trajet'}</h3>
+ ${ad?'':'<p class="mut sub">À la fin, on vérifie ton numéro de mobile via Telegram : c’est gratuit et ça prend une minute.</p>'}
+ <label>Prénom<input name="name" required maxlength="40" value="${esc(ad?.name)}"></label>
+ ${citySel('from',ad?.from_city)}${citySel('to',ad?.to_city)}
+ <label>Fréquence<select id="rec"><option value="0">Une seule fois</option><option value="1"${rec?' selected':''}>Chaque semaine</option></select></label>
+ <div id="once"${rec?' hidden':''}><label>Date<input type="date" name="date" min="${FRday().iso}" value="${esc(ad?.date)}"></label></div>
+ <div id="weekly"${rec?'':' hidden'}><label>Jours</label><div class="chips">${DJ.map((l,i)=>`<label class="chip"><input type="checkbox" value="${i}"${d.includes(i)?' checked':''}><span>${l}</span></label>`).join('')}</div></div>
+ <label>${kind==='offer'?'Heure de départ':'Heure idéale'}<input type="time" name="time" required value="${esc(ad?.time)}"></label>
+ <label>${kind==='offer'?'Places disponibles':'Places demandées'}<input type="number" name="seats" min="1" max="8" value="${+ad?.seats||1}"></label>
+ <label>Description (départ, arrivée, détails)<textarea name="description" rows="3" maxlength="500">${esc(ad?.description)}</textarea></label>
+ <label>Comment te contacter ?</label><div class="opts">${[['tel','📞 Appel'],['wa','💬 WhatsApp'],['tg','✈️ Telegram']].map(([v,l])=>`<label class="pill"><input type="checkbox" value="${v}"${cs.includes(v)?' checked':''}><span>${l}</span></label>`).join('')}</div>
+ <div class="row"><button type="button" class="btn" onclick="$('#dlg').close()">Annuler</button><button class="btn pri">${ad?'Enregistrer':'Continuer'}</button></div>
+ ${ad?'<div class="row"><button type="button" class="btn" id="del">Supprimer l’annonce</button></div>':''}</form>`;
+ $('#rec').onchange=e=>{$('#once').hidden=e.target.value==='1';$('#weekly').hidden=e.target.value!=='1'};
+ if(ad)$('#del').onclick=async()=>{if(!confirm('Supprimer cette annonce ?'))return;
+  try{await api('/api/edit',{method:'DELETE',body:JSON.stringify({code})});$('#dlg').close();show(tab)}catch(e){alert(e.message)}};
+ $('#f').onsubmit=async e=>{e.preventDefault();const f=e.target,rc=$('#rec').value==='1',btn=f.querySelector('.row .pri');
+  const cv=n=>f.elements[n].value==='__'?f.elements[n+'_x'].value.trim():f.elements[n].value;
+  const b={kind,contact:[...f.querySelectorAll('.pill input:checked')].map(x=>x.value),from:cv('from'),to:cv('to'),name:f.elements.name.value,time:f.elements.time.value,seats:f.elements.seats.value,description:f.elements.description.value,
+   date:rc?null:f.elements.date.value,days:rc?[...f.querySelectorAll('.chip input:checked')].map(x=>+x.value):[]};
+  if(!b.from||!b.to)return alert('Indique les villes de départ et d’arrivée.');
+  if(!b.contact.length)return alert('Choisis au moins un moyen de contact.');
+  if(!rc&&!b.date||rc&&!b.days.length)return alert(rc?'Choisis au moins un jour.':'Choisis une date.');
+  btn.disabled=true;
+  try{
+   if(ad){await api('/api/edit',{method:'PUT',body:JSON.stringify({...b,code})});$('#dlg').close();show(tab);return}
+   const j=await api('/api/ads',{method:'POST',body:JSON.stringify(b)});
+   $('#dlg').innerHTML=`<h3>Dernière étape : vérifier ton numéro</h3>
+    <p>Pour que tout le monde puisse se faire confiance, chaque annonce est liée à un vrai numéro de téléphone. Malheureusement, on n’a pas d’autre choix que Telegram pour le vérifier : les SMS de vérification coûtent cher, et ce site est gratuit et bénévole. Telegram, lui, est gratuit.</p>
+    <ol class="steps"><li>Appuie sur <b>Ouvrir Telegram</b> ci-dessous. Pas encore l’appli ? Installe-la avec ton numéro de mobile, puis reviens ici.</li>
+    <li>Dans la conversation avec notre bot, appuie sur <b>Démarrer</b>.</li>
+    <li>Appuie sur <b>📱 Partager mon numéro</b>, puis confirme.</li></ol>
+    <p>C’est tout : ton annonce est publiée aussitôt, et le bot t’envoie ton <b>code secret</b> pour la modifier ou la supprimer plus tard. Ton numéro n’est montré qu’aux personnes qui cliquent sur « Contacter ».</p>
+    <a class="btn pri" href="${esc(j.link)}" target="_blank" rel="noopener">✈️ Ouvrir Telegram</a><p class="mut" id="st">En attente de la vérification…</p>
+    ${CFG.contact?`<p class="mut small">Pas de Telegram ? Écris-nous à <a href="mailto:${esc(CFG.contact)}">${esc(CFG.contact)}</a> avec ton annonce, on la publie pour toi.</p>`:''}
+    <button class="btn" onclick="$('#dlg').close()">Fermer</button>`;
+   const t0=Date.now(),t=setInterval(async()=>{if(!$('#dlg').open)return clearInterval(t);
+    try{const s=await api('/api/pending/'+j.token);
+     if(s.done){clearInterval(t);$('#st').textContent='✅ Publié ! Garde le code secret reçu sur Telegram.';show(tab)}
+     else if(s.expired||Date.now()-t0>2*3600e3){clearInterval(t);$('#st').textContent='Lien expiré : recommence le formulaire.'}}catch{}},2500)}
+  catch(err){btn.disabled=false;alert(err.message)}};
+ $('#dlg').showModal()}
+async function openEdit(){const code=prompt('Code secret reçu sur Telegram\n(Code perdu ? Envoie /mesannonces au bot Telegram.)');if(!code)return;
+ try{openForm(null,await api('/api/edit/lookup',{method:'POST',body:JSON.stringify({code})}),code)}catch(e){alert(e.message)}}
+track('visit');
+show('trains');
+</script></body></html>

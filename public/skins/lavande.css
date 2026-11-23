@@ -1,0 +1,4 @@
+/* Lavande : doux, violet et rose, très arrondi */
+:root{--bg:#f5f2fb;--paper:#ffffff;--ink:#2a2540;--mut:#766f8f;--line:#e4def2;--g:#5b3fd1;--tint:#ece8fb;--cl:#e8528a;--on:#fff;--sig:#ffd166;--bd:#2a2540;--sh:0 2px 4px #5b3fd10f,0 10px 28px #5b3fd114}
+body,h1,h2,h3,.tm,.btn,.btns a,nav button,input,select,textarea,.seats{font-family:Outfit,system-ui,sans-serif}
+details.ad,.board,.bus{border-radius:26px}dialog{border-radius:28px}.btn,.btns a,.mail a{border-radius:999px}

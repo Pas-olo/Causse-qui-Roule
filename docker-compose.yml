@@ -1,0 +1,22 @@
+# Lance le site + le tunnel Cloudflare : docker compose up -d --build
+services:
+  app:
+    build: .
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      # Le site n'est joignable que par le tunnel (réseau Docker interne) : l'en-tête CF-Connecting-IP est donc fiable.
+      - TRUST_PROXY=${TRUST_PROXY:-cloudflare}
+    volumes:
+      - ./data:/app/data
+    # Volontairement AUCUN « ports: » : publier le port 3000 permettrait de contourner le tunnel
+    # et de falsifier l'IP des visiteurs. Pour tester depuis la machine, voir le README.
+
+  tunnel:
+    image: cloudflare/cloudflared:latest
+    restart: unless-stopped
+    command: tunnel --no-autoupdate run
+    environment:
+      - TUNNEL_TOKEN=${TUNNEL_TOKEN}
+    depends_on:
+      - app

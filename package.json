@@ -1,0 +1,10 @@
+{
+  "name": "causse-qui-roule",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "start": "node --disable-warning=ExperimentalWarning server.js",
+    "fonts": "node scripts/fetch-fonts.mjs"
+  },
+  "engines": { "node": ">=22.13" }
+}

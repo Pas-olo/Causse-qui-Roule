@@ -1,0 +1,8 @@
+/* Journal : papier crème, encre noire, rouge, serif */
+:root{--bg:#f1ede4;--paper:#fbf8f1;--ink:#141414;--mut:#5f5b52;--line:#cfc8b8;--g:#141414;--tint:#e6dfcf;--cl:#b3261e;--on:#fff;--sig:#e0b000;--bd:#141414;--sh:none}
+body,.btn,.btns a,nav button,input,select,textarea,.seats{font-family:'Source Serif 4',Georgia,serif}
+h1,h2,h3,.tm{font-family:'Playfair Display',Georgia,serif}
+.board h2,.bus h2{font-family:'Source Serif 4',serif}
+details.ad,.board,.bus,dialog,.btn,.btns a,input,select,textarea,.seats,nav div,nav button,.mail a{border-radius:3px}
+details.ad,.board,.bus{border:1.5px solid var(--ink)}.filters select{border-radius:3px}
+header{border-bottom:3px double var(--ink);margin-bottom:.4rem}

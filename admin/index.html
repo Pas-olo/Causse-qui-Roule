@@ -1,0 +1,304 @@
+<!doctype html><html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow">
+<title>Admin · {{NAME}}</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22%3E%3Ctext y=%22.9em%22 font-size=%2290%22%3E%F0%9F%94%A7%3C/text%3E%3C/svg%3E">
+<style>
+:root{--bg:#f4f3f8;--paper:#fff;--ink:#1f1a33;--mut:#6b6580;--line:#e2dfeb;--pri:{{THEME_COLOR}};--ok:#1f8a4c;--warn:#b7791f;--bad:#c53030;--r:10px}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.45 system-ui,-apple-system,'Segoe UI',sans-serif}
+a{color:var(--pri)}h1{font-size:1.15rem;margin:0}h2{font-size:1.05rem;margin:1.4rem 0 .6rem}h3{font-size:.95rem;margin:1rem 0 .4rem}
+header{display:flex;align-items:center;gap:1rem;padding:.8rem 1.2rem;background:var(--paper);border-bottom:1px solid var(--line);position:sticky;top:0;z-index:5}
+header .sp{flex:1}nav{display:flex;gap:.25rem;flex-wrap:wrap}
+nav button{border:0;background:none;padding:.45rem .75rem;border-radius:8px;font:inherit;color:var(--mut);cursor:pointer}nav button.on{background:var(--pri);color:#fff}
+main{max-width:1150px;margin:0 auto;padding:1rem 1.2rem 4rem}
+.card{background:var(--paper);border:1px solid var(--line);border-radius:var(--r);padding:1rem 1.1rem;margin:0 0 1rem}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:.8rem}
+label{display:block;font-weight:600;font-size:.85rem;margin:.6rem 0 .2rem}label small,.hint{font-weight:400;color:var(--mut);font-size:.8rem}
+input,select,textarea{width:100%;padding:.5rem .6rem;border:1px solid var(--line);border-radius:8px;font:inherit;background:#fff;color:var(--ink)}
+textarea{min-height:6rem;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:.85rem}
+input[type=checkbox]{width:auto}input[type=color]{width:4rem;padding:.1rem;height:2.3rem}
+.btn{display:inline-flex;align-items:center;gap:.35rem;padding:.5rem .85rem;border:1px solid var(--line);border-radius:8px;background:#fff;color:var(--ink);font:inherit;font-weight:600;cursor:pointer;text-decoration:none}
+.btn.pri{background:var(--pri);border-color:var(--pri);color:#fff}.btn.bad{color:var(--bad);border-color:#f0c4c4}.btn.sm{padding:.25rem .55rem;font-size:.82rem}
+.btn:disabled{opacity:.5;cursor:default}.row{display:flex;gap:.5rem;flex-wrap:wrap;align-items:center}.row.end{justify-content:flex-end}
+table{width:100%;border-collapse:collapse;font-size:.88rem}th,td{text-align:left;padding:.45rem .5rem;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-size:.75rem;text-transform:uppercase;letter-spacing:.04em;color:var(--mut)}tbody tr.click{cursor:pointer}tbody tr.click:hover{background:#faf9fd}
+.num td:not(:first-child),.num th:not(:first-child){text-align:right;font-variant-numeric:tabular-nums}
+.badge{display:inline-block;padding:.1rem .45rem;border-radius:99px;font-size:.75rem;font-weight:600;background:#eee;white-space:nowrap}
+.b-online{background:#dcf5e5;color:var(--ok)}.b-expired{background:#eee;color:var(--mut)}.b-deleted{background:#fdecd2;color:var(--warn)}.b-removed{background:#fde0e0;color:var(--bad)}
+.ok{color:var(--ok)}.warn{color:var(--warn)}.bad{color:var(--bad)}.mut{color:var(--mut)}
+.toolbar{display:flex;gap:.5rem;flex-wrap:wrap;margin-bottom:.8rem}.toolbar>*{width:auto}.toolbar input{flex:1;min-width:12rem}
+.save{position:sticky;bottom:0;background:var(--paper);border-top:1px solid var(--line);padding:.7rem 1rem;margin:1rem -1.1rem -1rem;border-radius:0 0 var(--r) var(--r);display:flex;gap:.6rem;align-items:center;justify-content:flex-end}
+.dirty{color:var(--warn);font-weight:600;font-size:.85rem}
+dialog{border:0;border-radius:14px;padding:1.2rem 1.3rem;width:min(720px,96vw);max-height:92vh;box-shadow:0 20px 60px #0004}dialog::backdrop{background:#1f1a3366}
+.station{border:1px solid var(--line);border-radius:var(--r);padding:.8rem;margin:.8rem 0;background:#fcfcfe}
+.groups{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:.7rem}
+.group{border:1px dashed var(--line);border-radius:8px;padding:.6rem;background:#fff}
+#toast{position:fixed;left:50%;bottom:1.2rem;transform:translateX(-50%);background:var(--ink);color:#fff;padding:.6rem 1rem;border-radius:10px;opacity:0;transition:.2s;pointer-events:none;z-index:50;max-width:90vw}
+#toast.show{opacity:1}#toast.err{background:var(--bad)}
+.login{max-width:360px;margin:12vh auto}.code{font:700 1.3rem ui-monospace,monospace;letter-spacing:.1em;background:#f1effa;padding:.5rem .8rem;border-radius:8px;display:inline-block}
+.chk{display:inline-flex;gap:.3rem;align-items:center;font-weight:500;margin:.2rem .7rem .2rem 0}
+</style></head><body>
+<div id="app"></div><dialog id="dlg"></dialog><div id="toast"></div>
+<script>
+const $=s=>document.querySelector(s),esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const DC=['Lu','Ma','Me','Je','Ve','Sa','Di'],DJ=['L','M','M','J','V','S','D'],PW={S:'scolaire',V:'vacances',E:'été'};
+const STATUS={online:['En ligne','b-online'],expired:['Expirée','b-expired'],deleted:['Supprimée (auteur·ice)','b-deleted'],removed:['Retirée (admin)','b-removed']};
+let TAB='dash',CONF=null,BUS=null,BUSDIRTY=false,ADS={status:'online',kind:'',q:'',page:1};
+
+// ——— Outils ———
+function toast(msg,err){const t=$('#toast');t.textContent=msg;t.className='show'+(err?' err':'');clearTimeout(t._h);t._h=setTimeout(()=>t.className='',err?5000:2500)}
+async function api(url,opt={}){
+ const r=await fetch(url,{...opt,headers:{'x-admin':'1',...(opt.body?{'content-type':'application/json'}:{})}});
+ if(r.status===401&&!url.endsWith('/login')){loginView();throw new Error('Session expirée : reconnecte-toi.')}
+ const j=await r.json().catch(()=>({}));if(!r.ok)throw new Error(j.error||'Erreur '+r.status);return j}
+const put=(url,body,method='PUT')=>api(url,{method,body:JSON.stringify(body)});
+const dt=t=>t?new Date(t).toLocaleString('fr-FR',{timeZone:'Europe/Paris',dateStyle:'short',timeStyle:'short'}):'—';
+const when=a=>{const d=JSON.parse(a.days||'[]');return (d.length?d.map(i=>DJ[i]).join(' '):a.date?new Date(a.date+'T12:00').toLocaleDateString('fr-FR',{weekday:'short',day:'numeric',month:'short',year:'2-digit'}):'—')+' · '+(a.time||'').replace(':','h')};
+const lines=s=>String(s||'').split('\n').map(x=>x.trim()).filter(Boolean);
+function confirmDanger(msg){return confirm(msg)}
+
+// ——— Connexion ———
+async function loginView(){
+ let me={};try{me=await fetch('/api/admin/me').then(r=>r.json())}catch{}
+ $('#app').innerHTML=`<div class="login card"><h1>🔧 Administration</h1>
+ ${me.enabled===false?`<p class="bad">L’administration est désactivée : ajoute <code>ADMIN_PASSWORD=</code> (10 caractères minimum) dans le fichier <code>.env</code>, puis redémarre le site.</p>`:
+ `<form id="lf"><label>Identifiant<input name="user" autocomplete="username" required></label><label>Mot de passe<input name="password" type="password" autocomplete="current-password" required></label>
+ <p class="row end"><button class="btn pri">Se connecter</button></p><p class="hint">L’identifiant et le mot de passe sont dans le fichier <code>.env</code> du serveur (ADMIN_USER, ADMIN_PASSWORD).</p></form>`}</div>`;
+ $('#lf')?.addEventListener('submit',async e=>{e.preventDefault();const f=e.target;
+  try{await put('/api/admin/login',{user:f.user.value,password:f.password.value},'POST');start()}catch(err){toast(err.message,1)}});
+}
+async function start(){
+ try{CONF=await api('/api/admin/config')}catch{return}
+ $('#app').innerHTML=`<header><h1>🔧 Admin · ${esc(CONF.site.name.replace(/\*/g,''))}</h1><nav>${[['dash','Tableau de bord'],['ads','Annonces'],['site','Site'],['trains','Trains'],['bus','Bus'],['backup','Sauvegardes']].map(([k,l])=>`<button data-k="${k}">${l}</button>`).join('')}</nav><span class="sp"></span><a class="btn sm" href="/" target="_blank">Voir le site ↗</a><button class="btn sm" id="out">Déconnexion</button></header><main id="main"></main>`;
+ $('nav').onclick=e=>{const b=e.target.closest('button');if(b)show(b.dataset.k)};
+ $('#out').onclick=async()=>{await put('/api/admin/logout',{},'POST').catch(()=>{});loginView()};
+ show(TAB)}
+function show(k){
+ if(TAB==='bus'&&k!=='bus'&&BUSDIRTY&&!confirm('Des horaires de bus ne sont pas enregistrés. Quitter quand même ?'))return;
+ $('#main').onclick=null;$('#main').onchange=null;
+ TAB=k;document.querySelectorAll('nav button').forEach(b=>b.classList.toggle('on',b.dataset.k===k));
+ $('#main').innerHTML='<p class="mut">Chargement…</p>';VIEWS[k]().catch(e=>{$('#main').innerHTML=`<p class="bad">${esc(e.message)}</p>`})}
+addEventListener('beforeunload',e=>{if(BUSDIRTY){e.preventDefault();e.returnValue=''}});
+
+const VIEWS={};
+// ——— Tableau de bord ———
+VIEWS.dash=async()=>{const o=await api('/api/admin/overview'),s=o.stats,c=s.cols;
+ const rows=[['Annonces créées','created'],['dont trajets proposés','offers'],['Pages vues','visits'],['Visiteurs (uniques/jour)','visitors'],['Clics « Contacter »','reveal'],['Appels','tel'],['WhatsApp','wa'],['Telegram','tg'],['Signalements','report']];
+ const b=o.bot,stat=(ok,txt)=>`<span class="${ok?'ok':'bad'}">${ok?'✅':'⚠️'} ${txt}</span>`;
+ $('#main').innerHTML=`<div class="grid">
+ <div class="card"><h3>En ligne</h3><p style="font-size:1.6rem;margin:.2rem 0"><b>${s.online.offer||0}</b> <small class="mut">trajets proposés</small></p><p style="font-size:1.6rem;margin:.2rem 0"><b>${s.online.request||0}</b> <small class="mut">demandes</small></p><p class="mut">${s.pending} vérification(s) Telegram en cours</p></div>
+ <div class="card"><h3>État</h3>
+  <p>${b.configured?(b.error?stat(0,'Bot : '+esc(b.error)):b.ok?stat(1,'Bot @'+esc(b.username)+' connecté'):'⏳ Bot en démarrage'):stat(0,'Bot non configuré (BOT_TOKEN dans .env)')}</p>
+  ${o.stations.map(g=>`<p>${g.error?stat(0,'Gare de '+esc(g.name)+' : horaires indisponibles'):stat(1,'Gare de '+esc(g.name)+(g.stale?' (données un peu anciennes)':''))}</p>`).join('')||'<p class="mut">Aucune gare configurée.</p>'}
+  <p>${o.secrets.siteUrl?stat(1,'Adresse du site renseignée'):stat(0,'Adresse du site manquante (onglet Site)')}</p></div>
+ <div class="card"><h3>Archives</h3><p>${s.archived.expired||0} expirées<br>${s.archived.deleted||0} supprimées par leurs auteur·ices<br>${s.archived.removed||0} retirées par l’admin</p><p class="mut">Dernière sauvegarde auto : ${esc(o.backups[0]||'aucune')}</p></div></div>
+ <div class="card"><h3>Fréquentation</h3><table class="num"><thead><tr><th></th>${o.windows.map(w=>`<th>${w}</th>`).join('')}</tr></thead>
+ <tbody>${rows.map(([l,k])=>`<tr><td>${l}</td>${c.map(x=>`<td>${x[k]}</td>`).join('')}</tr>`).join('')}</tbody></table>
+ <p class="hint">Comptage anonyme, sans cookie. Les visiteurs uniques sont comptés par jour puis additionnés.</p></div>`};
+
+// ——— Annonces ———
+VIEWS.ads=async()=>{
+ const p=new URLSearchParams({status:ADS.status,kind:ADS.kind,q:ADS.q,page:ADS.page}),r=await api('/api/admin/ads?'+p);
+ $('#main').innerHTML=`<div class="card"><div class="toolbar">
+ <select id="fs">${[['online','En ligne'],['archived','Archivées'],['expired','Expirées'],['deleted','Supprimées par l’auteur·ice'],['removed','Retirées par l’admin'],['all','Toutes']].map(([v,l])=>`<option value="${v}"${ADS.status===v?' selected':''}>${l}</option>`).join('')}</select>
+ <select id="fk"><option value="">Offres et demandes</option><option value="offer"${ADS.kind==='offer'?' selected':''}>Trajets proposés</option><option value="request"${ADS.kind==='request'?' selected':''}>Demandes</option></select>
+ <input id="fq" placeholder="Rechercher : prénom, ville, n°, téléphone, @pseudo…" value="${esc(ADS.q)}">
+ <button class="btn pri" id="new">+ Nouvelle annonce</button><a class="btn" href="/api/admin/ads.csv">Exporter (CSV)</a></div>
+ <p class="mut">${r.total} annonce(s)</p>
+ <div style="overflow-x:auto"><table><thead><tr><th>N°</th><th>Statut</th><th></th><th>Prénom</th><th>Trajet</th><th>Quand</th><th>Pl.</th><th>Téléphone</th><th>Créée</th></tr></thead>
+ <tbody>${r.rows.map(a=>`<tr class="click" data-id="${a.id}"><td>${a.id}</td><td><span class="badge ${STATUS[a.status]?.[1]||''}">${STATUS[a.status]?.[0]||esc(a.status)}</span></td><td>${a.kind==='offer'?'🚗':'🙋'}</td><td>${esc(a.name)}${a.tg?`<br><small class="mut">@${esc(a.tg)}</small>`:''}</td><td>${esc(a.from_city)} → ${esc(a.to_city)}</td><td>${esc(when(a))}</td><td>${a.seats}</td><td>${esc(a.phone||'—')}</td><td>${dt(a.created)}</td></tr>`).join('')||'<tr><td colspan="9" class="mut">Aucune annonce.</td></tr>'}</tbody></table></div>
+ ${r.pages>1?`<p class="row">${r.page>1?'<button class="btn sm" id="prev">← Précédentes</button>':''}<span class="mut">Page ${r.page} / ${r.pages}</span>${r.page<r.pages?'<button class="btn sm" id="next">Suivantes →</button>':''}</p>`:''}</div>`;
+ const reload=()=>VIEWS.ads();
+ $('#fs').onchange=e=>{ADS.status=e.target.value;ADS.page=1;reload()};$('#fk').onchange=e=>{ADS.kind=e.target.value;ADS.page=1;reload()};
+ let t;$('#fq').oninput=e=>{clearTimeout(t);t=setTimeout(()=>{ADS.q=e.target.value.trim();ADS.page=1;reload().then(()=>{const i=$('#fq');i.focus();i.setSelectionRange(i.value.length,i.value.length)})},350)};
+ $('#prev')&&($('#prev').onclick=()=>{ADS.page--;reload()});$('#next')&&($('#next').onclick=()=>{ADS.page++;reload()});
+ $('#new').onclick=()=>adForm(null);
+ document.querySelectorAll('tr.click').forEach(tr=>tr.onclick=()=>adForm(r.rows.find(a=>a.id===+tr.dataset.id)))};
+
+function adForm(a){
+ const isNew=!a;a=a||{kind:'offer',days:'[]',contact:'tel,wa',seats:1};const d=JSON.parse(a.days||'[]'),rec=d.length>0,cs=(a.contact||'').split(',');
+ const cities=CONF.cities.map(c=>c.n);
+ $('#dlg').innerHTML=`<form id="af"><h2 style="margin-top:0">${isNew?'Nouvelle annonce':`Annonce n°${a.id} <span class="badge ${STATUS[a.status]?.[1]}">${STATUS[a.status]?.[0]}</span>`}</h2>
+ ${isNew?'<p class="hint">Pour une personne sans Telegram : tu publies pour elle et tu lui transmets le code secret.</p>':`<p class="hint">Créée le ${dt(a.created)}${a.updated?' · modifiée le '+dt(a.updated):''}${a.ended?' · archivée le '+dt(a.ended):''}${a.tg?' · Telegram @'+esc(a.tg):a.tg_id?' · Telegram id '+a.tg_id:''}</p>`}
+ <div class="grid">${isNew?`<label>Type<select name="kind"><option value="offer">Trajet proposé</option><option value="request">Demande de trajet</option></select></label>`:''}
+ <label>Prénom<input name="name" required maxlength="40" value="${esc(a.name)}"></label>
+ <label>Téléphone (06/07)<input name="phone" required value="${esc(a.phone)}"></label></div>
+ <datalist id="cl">${cities.map(c=>`<option value="${esc(c)}">`).join('')}</datalist>
+ <div class="grid"><label>Départ<input name="from" list="cl" required maxlength="40" value="${esc(a.from_city)}"></label><label>Arrivée<input name="to" list="cl" required maxlength="40" value="${esc(a.to_city)}"></label></div>
+ <div class="grid"><label>Fréquence<select id="rec"><option value="0">Une seule fois</option><option value="1"${rec?' selected':''}>Chaque semaine</option></select></label>
+ <label id="once"${rec?' hidden':''}>Date<input type="date" name="date" value="${esc(a.date)}"></label>
+ <div id="weekly"${rec?'':' hidden'}><label>Jours</label>${DC.map((l,i)=>`<label class="chk"><input type="checkbox" class="dd" value="${i}"${d.includes(i)?' checked':''}>${l}</label>`).join('')}</div>
+ <label>Heure<input type="time" name="time" required value="${esc(a.time)}"></label><label>Places<input type="number" name="seats" min="1" max="8" value="${+a.seats||1}"></label></div>
+ <label>Description<textarea name="description" maxlength="500">${esc(a.description)}</textarea></label>
+ <label>Moyens de contact affichés</label>${[['tel','Appel'],['wa','WhatsApp'],['tg','Telegram']].map(([v,l])=>`<label class="chk"><input type="checkbox" class="cc" value="${v}"${cs.includes(v)?' checked':''}${v==='tg'&&!a.tg&&!a.tg_id?' disabled':''}>${l}</label>`).join('')}
+ <p class="row end" style="margin-top:1rem">
+ ${isNew?'':(a.status==='online'?'<button type="button" class="btn bad" id="rm">Retirer</button>':'<button type="button" class="btn" id="rv">Remettre en ligne</button>')+'<button type="button" class="btn bad" id="hd">Effacer définitivement</button>'}
+ <span style="flex:1"></span><button type="button" class="btn" onclick="$('#dlg').close()">Fermer</button><button class="btn pri">${isNew?'Publier':'Enregistrer'}</button></p></form>`;
+ $('#rec').onchange=e=>{$('#once').hidden=e.target.value==='1';$('#weekly').hidden=e.target.value!=='1'};
+ const done=m=>{$('#dlg').close();toast(m);VIEWS.ads()};
+ $('#rm')&&($('#rm').onclick=async()=>{if(!confirmDanger('Retirer cette annonce du site ? Elle restera dans les archives.'))return;try{await put(`/api/admin/ads/${a.id}/status`,{status:'removed'},'POST');done('Annonce retirée')}catch(e){toast(e.message,1)}});
+ $('#rv')&&($('#rv').onclick=async()=>{try{await put(`/api/admin/ads/${a.id}/status`,{status:'online'},'POST');done('Annonce remise en ligne')}catch(e){toast(e.message,1)}});
+ $('#hd')&&($('#hd').onclick=async()=>{if(!confirmDanger(`Effacer DÉFINITIVEMENT l’annonce n°${a.id} et toutes ses données ? (À utiliser pour une demande d’effacement.) C’est irréversible.`))return;try{await api(`/api/admin/ads/${a.id}`,{method:'DELETE'});done('Annonce effacée')}catch(e){toast(e.message,1)}});
+ $('#af').onsubmit=async e=>{e.preventDefault();const f=e.target,rc=$('#rec').value==='1';
+  const b={kind:f.kind?.value||a.kind,name:f.elements.name.value,phone:f.phone.value,from:f.from.value,to:f.to.value,time:f.time.value,seats:f.seats.value,description:f.description.value,
+   contact:[...f.querySelectorAll('.cc:checked')].map(x=>x.value),date:rc?null:f.date.value,days:rc?[...f.querySelectorAll('.dd:checked')].map(x=>+x.value):[]};
+  try{if(isNew){const r=await put('/api/admin/ads',b,'POST');
+    $('#dlg').innerHTML=`<h2 style="margin-top:0">✅ Annonce n°${r.id} publiée</h2><p>Code secret à transmettre à la personne (pour modifier ou supprimer son annonce sur le site) :</p><p class="code">${esc(r.code)}</p><p class="hint">Note-le maintenant : il n’est pas conservé en clair.</p><p class="row end"><button class="btn pri" onclick="$('#dlg').close()">OK</button></p>`;VIEWS.ads()}
+   else{await put(`/api/admin/ads/${a.id}`,b);done('Annonce enregistrée')}}catch(err){toast(err.message,1)}};
+ $('#dlg').showModal()}
+
+// ——— Réglages du site ———
+async function saveConf(next,msg='Enregistré'){CONF=await put('/api/admin/config',next);toast(msg);return CONF}
+VIEWS.site=async()=>{const c=CONF,s=c.site;
+ $('#main').innerHTML=`<form id="sf"><div class="card"><h2 style="margin-top:0">Identité</h2><div class="grid">
+ <label>Nom du site <small>— *mot* = en couleur</small><input name="name" required value="${esc(s.name)}"></label>
+ <label>Sous-titre <small>— *mot* = en couleur</small><input name="tagline" value="${esc(s.tagline)}"></label></div>
+ <label>Description <small>(Google et aperçu des liens partagés)</small><input name="description" value="${esc(s.description)}"></label>
+ <div class="grid"><label>Adresse du site<input name="url" placeholder="https://…" value="${esc(s.url)}"></label>
+ <label>E-mail de contact <small>(signalements)</small><input name="contact" type="email" value="${esc(s.contact)}"></label></div>
+ <div class="grid"><label>Thème<select name="skin">${['lavande','ardoise','journal'].map(k=>`<option${s.skin===k?' selected':''}>${k}</option>`).join('')}</select></label>
+ <label>Couleur principale <small>(barre du téléphone, icône)</small><input name="themeColor" type="color" value="${esc(s.themeColor)}"></label></div>
+ <div class="grid"><label>Mentions légales : éditeur<input name="editor" value="${esc(s.editor)}"></label><label>Mentions légales : hébergement<input name="hosting" value="${esc(s.hosting)}"></label></div></div>
+ <div class="card"><h2 style="margin-top:0">Administrateur·ices Telegram</h2>
+ <label>Identifiants <small>— un par ligne. Pour connaître le sien : envoyer /monid au bot.</small><textarea name="admins" style="min-height:4rem">${esc(c.admins.join('\n'))}</textarea></label>
+ <p class="hint">Ils reçoivent les commandes /admin du bot et une alerte à chaque connexion à cette page.</p></div>
+ <div class="card"><h2 style="margin-top:0">Durées</h2><div class="grid">
+ <label>Annonce hebdomadaire : jours avant expiration<input name="recurringDays" type="number" min="7" max="365" value="${c.retention.recurringDays}"></label>
+ <label>Archives : jours avant anonymisation<input name="archiveDays" type="number" min="30" max="3650" value="${c.retention.archiveDays}"></label></div></div>
+ <div class="card"><h2 style="margin-top:0">Petite phrase sous le titre</h2><div class="grid">
+ <label>Début<input name="prefix" value="${esc(c.phrase.prefix)}"></label></div>
+ <label>Fins possibles <small>— une par ligne, tirée au hasard à chaque visite</small><textarea name="phrases" style="min-height:10rem">${esc(c.phrase.list.join('\n'))}</textarea></label></div>
+ <div class="card"><h2 style="margin-top:0">Villes proposées dans le formulaire</h2>
+ <label>Une par ligne : <small>Nom ; département (facultatif)</small><textarea name="cities" style="min-height:12rem">${esc(c.cities.map(x=>x.d?`${x.n} ; ${x.d}`:x.n).join('\n'))}</textarea></label></div>
+ <div class="card"><h2 style="margin-top:0">Textes de la page « À propos »</h2>
+ <p class="hint">Mise en forme : <code>## Titre</code>, ligne vide entre deux paragraphes, <code>- </code> pour une liste, <code>**gras**</code>, <code>*italique*</code>, <code>[texte](https://lien)</code>. Les parties Fonctionnement, Signalement, Sécurité, RGPD, Contact et Mentions légales sont générées automatiquement entre les deux.</p>
+ <label>Début de la page<textarea name="about" style="min-height:14rem">${esc(c.about)}</textarea></label>
+ <label>Fin de la page<textarea name="aboutEnd">${esc(c.aboutEnd)}</textarea></label>
+ <div class="save"><span class="hint">Les changements sont visibles immédiatement sur le site.</span><button class="btn pri">Enregistrer</button></div></div></form>`;
+ $('#sf').onsubmit=async e=>{e.preventDefault();const f=e.target;
+  const next={...CONF,site:{...CONF.site,name:f.elements.name.value,tagline:f.tagline.value,description:f.description.value,url:f.url.value,contact:f.contact.value,skin:f.skin.value,themeColor:f.themeColor.value,editor:f.editor.value,hosting:f.hosting.value},
+   admins:lines(f.admins.value),retention:{recurringDays:+f.recurringDays.value,archiveDays:+f.archiveDays.value},
+   phrase:{prefix:f.prefix.value,list:lines(f.phrases.value)},cities:lines(f.cities.value).map(l=>{const[n,d]=l.split(';').map(x=>x.trim());return{n,d:d||''}}),about:f.about.value,aboutEnd:f.aboutEnd.value};
+  try{await saveConf(next);$('header h1').textContent='🔧 Admin · '+CONF.site.name.replace(/\*/g,'')}catch(err){toast(err.message,1)}}};
+
+// ——— Trains ———
+VIEWS.trains=async()=>{const dest=await api('/api/admin/destinations').catch(()=>[]);
+ const st=structuredClone(CONF.stations);
+ const draw=()=>{$('#main').innerHTML=`<div class="card"><h2 style="margin-top:0">Gares</h2>
+ <p class="hint">Pour chaque gare : l’adresse de l’API SNCF (remplace le code à la fin par le <b>code UIC</b> de la gare, sur 10 chiffres) et des « paniers » de destinations. Un train va dans le premier panier dont un mot-clé apparaît dans sa destination ; sinon dans le <b>dernier panier</b>.</p>
+ ${st.map((s,i)=>`<div class="station" data-i="${i}"><div class="row"><h3 style="margin:0;flex:1">🚆 ${esc(s.name)||'Nouvelle gare'}</h3>${i?`<button type="button" class="btn sm" data-up="${i}">↑</button>`:''}<button type="button" class="btn sm bad" data-rm="${i}">Supprimer la gare</button></div>
+  <div class="grid"><label>Nom affiché<input data-f="name" value="${esc(s.name)}"></label><label>Lien « Tous les prochains trains »<input data-f="link" value="${esc(s.link)}" placeholder="https://www.ter.sncf.com/…"></label></div>
+  <label>URL de l’API<input data-f="api" value="${esc(s.api)}"></label>
+  <div class="groups">${s.groups.map((g,j)=>`<div class="group"><label style="margin-top:0">Panier ${j+1}${j===s.groups.length-1?' <small>(reçoit tout le reste)</small>':''}<input data-g="${j}" data-gf="label" value="${esc(g.label)}"></label>
+   <label>Mots-clés des destinations <small>— un par ligne</small><textarea data-g="${j}" data-gf="match" style="min-height:5rem">${esc(g.match.join('\n'))}</textarea></label>
+   ${s.groups.length>1?`<button type="button" class="btn sm bad" data-grm="${j}">Retirer ce panier</button>`:''}</div>`).join('')}</div>
+  <p><button type="button" class="btn sm" data-gadd="${i}">+ Ajouter un panier</button></p></div>`).join('')}
+ <p><button type="button" class="btn" id="sadd">+ Ajouter une gare</button></p>
+ <div class="save"><button class="btn pri" id="ssave">Enregistrer les gares</button></div></div>
+ <div class="card"><h2 style="margin-top:0">Destinations vues récemment</h2><p class="hint">Les destinations réellement affichées par la SNCF ces 30 derniers jours (depuis le dernier redémarrage). « Auto » = rangée par défaut dans le dernier panier : vérifie qu’elle est au bon endroit, sinon choisis un panier (puis enregistre).</p>
+ ${dest.map(g=>{const si=st.findIndex(s=>s.name===g.name);return `<h3>${esc(g.name)}</h3>${g.list.length?`<table><thead><tr><th>Destination</th><th>Vue le</th><th>Panier</th></tr></thead><tbody>${g.list.map(d=>`<tr><td>${esc(d.dest)} ${d.matched?'':'<span class="badge b-deleted">auto</span>'}</td><td>${dt(d.t)}</td><td>${si<0?'—':`<select data-assign="${si}" data-dest="${esc(d.dest)}">${st[si].groups.map((x,j)=>`<option value="${j}"${d.group===j?' selected':''}>${esc(x.label)}</option>`).join('')}</select>`}</td></tr>`).join('')}</tbody></table>`:'<p class="mut">Rien vu pour l’instant (la page Transport du site doit avoir été ouverte).</p>'}`}).join('')||'<p class="mut">Aucune gare.</p>'}</div>`;
+ const sync=()=>document.querySelectorAll('.station').forEach(el=>{const s=st[+el.dataset.i];
+  el.querySelectorAll('[data-f]').forEach(i=>s[i.dataset.f]=i.value.trim());
+  el.querySelectorAll('[data-gf]').forEach(i=>{const g=s.groups[+i.dataset.g];g[i.dataset.gf]=i.dataset.gf==='match'?lines(i.value):i.value.trim()})});
+ $('#main').onclick=e=>{const b=e.target.closest('button');if(!b)return;sync();
+  if(b.dataset.rm){if(!confirm('Supprimer cette gare ?'))return;st.splice(+b.dataset.rm,1)}
+  else if(b.dataset.up){const i=+b.dataset.up;[st[i-1],st[i]]=[st[i],st[i-1]]}
+  else if(b.dataset.grm){st[+b.closest('.station').dataset.i].groups.splice(+b.dataset.grm,1)}
+  else if(b.dataset.gadd){const g=st[+b.dataset.gadd].groups;g.splice(g.length-1,0,{label:'Vers …',match:[]})}
+  else if(b.id==='sadd')st.push({name:'',api:'https://www.garesetconnexions.sncf/schedule-table/Departures/00',link:'',groups:[{label:'Vers …',match:[]},{label:'Autres directions',match:[]}]});
+  else if(b.id==='ssave'){saveConf({...CONF,stations:st},'Gares enregistrées').then(()=>VIEWS.trains()).catch(err=>toast(err.message,1));return}
+  else return;draw()};
+ $('#main').onchange=e=>{const s=e.target.closest('[data-assign]');if(!s)return;sync();
+  const g=st[+s.dataset.assign].groups,dest=s.dataset.dest,j=+s.value;
+  g.forEach(x=>x.match=x.match.filter(m=>m.toLowerCase()!==dest.toLowerCase()));
+  if(j<g.length-1)g[j].match.push(dest);draw();toast('Panier modifié : pense à enregistrer')}};
+ draw()};
+
+// ——— Bus ———
+const fmtStop=s=>`${s[1]} ${s[0]}`+(s[2]?.days?` [${s[2].days.map(d=>DC[d]).join(' ')}]`:'')+(s[2]?.periods?` [${s[2].periods.map(p=>PW[p]).join(' ')}]`:'');
+function parseStops(txt){const out=[],errs=[];
+ lines(txt).forEach((l,n)=>{const m=l.match(/^(\d{1,2})[:h](\d{2})\s+(.+?)((?:\s*\[[^\]]*\])*)$/);
+  if(!m){errs.push(`Ligne ${n+1} : « ${l} » (format attendu : 07:05 Commune · Arrêt)`);return}
+  const time=m[1].padStart(2,'0')+':'+m[2],name=m[3].trim(),x={};
+  if(!name.includes(' · '))errs.push(`Ligne ${n+1} : écris l’arrêt sous la forme « Commune · Arrêt »`);
+  for(const br of m[4].match(/\[([^\]]*)\]/g)||[])for(const w of br.slice(1,-1).split(/[\s,]+/).filter(Boolean)){
+   const d=DC.findIndex(c=>c.toLowerCase()===w.toLowerCase().slice(0,2)),p=Object.entries(PW).find(([,v])=>v.normalize('NFD').replace(/[̀-ͯ]/g,'')===w.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,''));
+   if(p)(x.periods??=[]).push(p[0]);else if(d>=0)(x.days??=[]).push(d);else errs.push(`Ligne ${n+1} : « ${w} » inconnu (jours : Lu Ma Me Je Ve Sa Di ; périodes : scolaire vacances été)`)}
+  out.push(Object.keys(x).length?[name,time,x]:[name,time])});
+ return{stops:out,errs}}
+const dirty=v=>{BUSDIRTY=v;const e=$('#bdirty');if(e)e.textContent=v?'● Modifications non enregistrées':''};
+let BF={ligne:'',dir:'',q:''};
+VIEWS.bus=async()=>{if(!BUS||!BUSDIRTY)BUS=await api('/api/admin/bus');drawBus()};
+function drawBus(){const b=BUS,lignes=[...new Set(b.trips.map(t=>t.ligne))].sort(),dirs=[...new Set(b.trips.map(t=>t.direction))].sort();
+ const list=b.trips.map((t,i)=>({t,i})).filter(({t})=>(!BF.ligne||t.ligne===BF.ligne)&&(!BF.dir||t.direction===BF.dir)&&(!BF.q||t.stops.some(s=>s[0].toLowerCase().includes(BF.q.toLowerCase()))))
+  .sort((a,b)=>a.t.ligne.localeCompare(b.t.ligne)||a.t.direction.localeCompare(b.t.direction)||a.t.stops[0][1].localeCompare(b.t.stops[0][1]));
+ const R=k=>(b.periodes?.[k]||[]).map(r=>r.join(' ')).join('\n');
+ $('#main').innerHTML=`<div class="card"><h2 style="margin-top:0">Arrêts affichés sur le site</h2><div class="grid">
+ <label>Menu des arrêts <small>— une commune par ligne, dans l’ordre</small><textarea id="b-arrets">${esc(b.arrets.join('\n'))}</textarea></label>
+ <label>« Bientôt ? » <small>— communes pas encore desservies, en bas du menu</small><textarea id="b-bientot">${esc(b.bientot.join('\n'))}</textarea></label></div>
+ <label>Fiches horaires <small>— une par ligne : Commune | https://lien-vers-la-fiche</small><textarea id="b-sources">${esc(Object.entries(b.sources).map(([k,v])=>k+' | '+v).join('\n'))}</textarea></label>
+ <div class="grid"><label>Nom du réseau <small>(« source : … »)</small><input id="b-sname" value="${esc(b.sourceName)}"></label><label>Lien « Bientôt ? »<input id="b-slink" value="${esc(b.soonLink)}"></label><label>Texte du lien<input id="b-slabel" value="${esc(b.soonLabel)}"></label></div>
+ <p class="hint">Le site prend le premier arrêt d’un car dont la commune (avant le « · ») correspond à celle choisie dans le menu.</p></div>
+ <div class="card"><h2 style="margin-top:0">Calendrier</h2><p class="hint">Une période par ligne : <code>2026-10-17 2026-11-01</code>. Un jour qui n’est dans aucune période n’a aucun car (ex. 1er mai).</p><div class="grid">
+ <label>Périodes scolaires<textarea id="b-S">${R('S')}</textarea></label><label>Petites vacances<textarea id="b-V">${R('V')}</textarea></label><label>Été<textarea id="b-E">${R('E')}</textarea></label>
+ <label>Jours fériés <small>— seuls les cars « fériés » roulent</small><textarea id="b-feries">${esc(b.feries.join('\n'))}</textarea><button type="button" class="btn sm" id="calcf" style="margin-top:.3rem">Calculer pour l’année scolaire en cours</button></label></div></div>
+ <div class="card"><div class="row"><h2 style="margin:0;flex:1">Cars (${b.trips.length})</h2><button class="btn pri" id="tnew">+ Nouveau car</button></div>
+ <div class="toolbar" style="margin-top:.8rem"><select id="bl"><option value="">Toutes les lignes</option>${lignes.map(l=>`<option${BF.ligne===l?' selected':''}>${esc(l)}</option>`).join('')}</select>
+ <select id="bd"><option value="">Toutes les directions</option>${dirs.map(l=>`<option${BF.dir===l?' selected':''}>${esc(l)}</option>`).join('')}</select><input id="bq" placeholder="Arrêt contenant…" value="${esc(BF.q)}"></div>
+ <div style="overflow-x:auto"><table><thead><tr><th>Ligne</th><th>Direction</th><th>Jours</th><th>Périodes</th><th>Départ</th><th>Arrivée</th><th></th></tr></thead><tbody>
+ ${list.map(({t,i})=>{const a=t.stops[0],z=t.stops[t.stops.length-1];return `<tr><td>${esc(t.ligne)}</td><td>${esc(t.direction)}</td><td>${t.days.map(d=>DC[d]).join(' ')}${t.ferie?' + fériés':''}</td><td>${(t.periods||[]).map(p=>PW[p]).join(', ')}</td><td><b>${a[1]}</b> ${esc(a[0])}</td><td><b>${z[1]}</b> ${esc(z[0])}</td>
+ <td style="white-space:nowrap"><button class="btn sm" data-ed="${i}">Modifier</button> <button class="btn sm" data-dup="${i}">Dupliquer</button> <button class="btn sm bad" data-del="${i}">✕</button></td></tr>`}).join('')||'<tr><td colspan="7" class="mut">Aucun car.</td></tr>'}</tbody></table></div>
+ <div class="save"><span id="bdirty" class="dirty"></span><a class="btn" href="/api/admin/bus" download="bus.json">Exporter bus.json</a><label class="btn" style="margin:0">Importer bus.json<input type="file" id="bimp" accept=".json,application/json" hidden></label><button class="btn pri" id="bsave">Enregistrer les horaires</button></div></div>`;
+ dirty(BUSDIRTY);
+ const collect=()=>{const L=id=>lines($(id).value),rng=id=>L(id).map(l=>l.split(/\s+/).slice(0,2));
+  Object.assign(BUS,{arrets:L('#b-arrets'),bientot:L('#b-bientot'),sources:Object.fromEntries(L('#b-sources').map(l=>l.split('|').map(x=>x.trim())).filter(x=>x[0]&&x[1])),
+   sourceName:$('#b-sname').value.trim(),soonLink:$('#b-slink').value.trim(),soonLabel:$('#b-slabel').value.trim(),periodes:{S:rng('#b-S'),V:rng('#b-V'),E:rng('#b-E')},feries:L('#b-feries')})};
+ $('#main').querySelectorAll('textarea,input:not([type=file]):not(#bq)').forEach(el=>el.oninput=()=>dirty(true));
+ $('#bl').onchange=e=>{collect();BF.ligne=e.target.value;drawBus()};$('#bd').onchange=e=>{collect();BF.dir=e.target.value;drawBus()};
+ let tq;$('#bq').oninput=e=>{clearTimeout(tq);tq=setTimeout(()=>{collect();BF.q=e.target.value.trim();drawBus();const i=$('#bq');i.focus();i.setSelectionRange(i.value.length,i.value.length)},300)};
+ $('#calcf').onclick=()=>{$('#b-feries').value=feries().join('\n');dirty(true)};
+ $('#tnew').onclick=()=>{collect();tripForm(null)};
+ $('#main').querySelectorAll('[data-ed]').forEach(x=>x.onclick=()=>{collect();tripForm(+x.dataset.ed)});
+ $('#main').querySelectorAll('[data-dup]').forEach(x=>x.onclick=()=>{collect();const i=+x.dataset.dup;BUS.trips.splice(i+1,0,structuredClone(BUS.trips[i]));dirty(true);tripForm(i+1)});
+ $('#main').querySelectorAll('[data-del]').forEach(x=>x.onclick=()=>{if(!confirm('Supprimer ce car ?'))return;collect();BUS.trips.splice(+x.dataset.del,1);dirty(true);drawBus()});
+ $('#bsave').onclick=async()=>{collect();try{const r=await put('/api/admin/bus',BUS);BUS=await api('/api/admin/bus');dirty(false);drawBus();toast(`Horaires enregistrés (${r.trips} cars)`)}catch(e){toast(e.message,1)}};
+ $('#bimp').onchange=async e=>{const f=e.target.files[0];if(!f)return;try{const j=JSON.parse(await f.text());if(!Array.isArray(j.trips))throw new Error('Ce fichier ne contient pas de cars (« trips »).');
+  if(!confirm(`Remplacer tous les horaires par ceux du fichier (${j.trips.length} cars) ?`))return;BUS={...BUS,...j};dirty(true);drawBus();toast('Fichier chargé : vérifie puis enregistre')}catch(err){toast('Import impossible : '+err.message,1)}}}
+function tripForm(i){const isNew=i==null,t=isNew?{ligne:'',direction:'',days:[0,1,2,3,4],periods:['S','V','E'],stops:[]}:BUS.trips[i];
+ $('#dlg').innerHTML=`<form id="tf"><h2 style="margin-top:0">${isNew?'Nouveau car':'Modifier le car'}</h2>
+ <div class="grid"><label>Ligne<input name="ligne" value="${esc(t.ligne)}" placeholder="ex. 812"></label><label>Direction <small>(« Vers … »)</small><input name="direction" value="${esc(t.direction)}" placeholder="ex. Montauban"></label></div>
+ <label>Jours de circulation</label>${DC.map((l,j)=>`<label class="chk"><input type="checkbox" class="td" value="${j}"${t.days.includes(j)?' checked':''}>${l}</label>`).join('')}<label class="chk"><input type="checkbox" name="ferie"${t.ferie?' checked':''}>+ jours fériés</label>
+ <label>Périodes</label>${Object.entries(PW).map(([k,v])=>`<label class="chk"><input type="checkbox" class="tp" value="${k}"${(t.periods||[]).includes(k)?' checked':''}>${v}</label>`).join('')}
+ <label>Arrêts, dans l’ordre <small>— une ligne par arrêt : <code>07:05 Caylus · Centre</code>. Exceptions entre crochets : <code>[Lu]</code> = ce jour-là seulement, <code>[scolaire]</code> = en période scolaire seulement.</small>
+ <textarea name="stops" style="min-height:16rem">${esc(t.stops.map(fmtStop).join('\n'))}</textarea></label><p id="terr" class="bad"></p>
+ <p class="row end"><button type="button" class="btn" onclick="$('#dlg').close()">Annuler</button><button class="btn pri">${isNew?'Ajouter':'Valider'}</button></p>
+ <p class="hint">Pense ensuite à cliquer sur « Enregistrer les horaires ».</p></form>`;
+ $('#tf').onsubmit=e=>{e.preventDefault();const f=e.target,{stops,errs}=parseStops(f.stops.value);
+  if(stops.length<2)errs.push('Il faut au moins deux arrêts.');
+  const days=[...f.querySelectorAll('.td:checked')].map(x=>+x.value);if(!days.length&&!f.ferie.checked)errs.push('Choisis au moins un jour.');
+  const periods=[...f.querySelectorAll('.tp:checked')].map(x=>x.value);if(!periods.length)errs.push('Choisis au moins une période.');
+  if(errs.length){$('#terr').innerHTML=errs.map(esc).join('<br>');return}
+  const n={ligne:f.ligne.value.trim(),direction:f.direction.value.trim()||stops[stops.length-1][0].split(' · ')[0],days,periods,stops};if(f.ferie.checked)n.ferie=true;
+  if(isNew)BUS.trips.push(n);else BUS.trips[i]=n;dirty(true);$('#dlg').close();drawBus()};
+ $('#dlg').showModal()}
+// Jours fériés français de l'année scolaire en cours (1er sept → 31 août)
+function feries(){const now=new Date(),y0=now.getMonth()>=8?now.getFullYear():now.getFullYear()-1,out=[];
+ const easter=y=>{const a=y%19,b=Math.floor(y/100),c=y%100,d=Math.floor(b/4),e=b%4,f=Math.floor((b+8)/25),g=Math.floor((b-f+1)/3),h=(19*a+b-d-g+15)%30,i=Math.floor(c/4),k=c%4,l=(32+2*e+2*i-h-k)%7,m=Math.floor((a+11*h+22*l)/451),mo=Math.floor((h+l-7*m+114)/31);return new Date(Date.UTC(y,mo-1,(h+l-7*m+114)%31+1))};
+ const iso=d=>d.toISOString().slice(0,10),add=(d,n)=>new Date(+d+n*864e5);
+ for(const y of[y0,y0+1]){const e=easter(y);for(const d of[`${y}-01-01`,iso(add(e,1)),`${y}-05-01`,`${y}-05-08`,iso(add(e,39)),iso(add(e,50)),`${y}-07-14`,`${y}-08-15`,`${y}-11-01`,`${y}-11-11`,`${y}-12-25`])if(d>=`${y0}-09-01`&&d<=`${y0+1}-08-31`)out.push(d)}
+ return out.sort()}
+
+// ——— Sauvegardes et modèle ———
+VIEWS.backup=async()=>{const o=await api('/api/admin/overview');
+ $('#main').innerHTML=`<div class="card"><h2 style="margin-top:0">Base de données</h2><p>Une copie complète (annonces, archives, statistiques) est faite automatiquement chaque jour dans <code>data/backups/</code> (7 dernières gardées). Pense à en copier une de temps en temps ailleurs que sur ce serveur.</p>
+ <p><a class="btn pri" href="/api/admin/backup">⬇ Télécharger une sauvegarde maintenant</a></p><p class="hint">Sauvegardes sur le serveur : ${o.backups.map(esc).join(', ')||'aucune pour l’instant'}</p></div>
+ <div class="card"><h2 style="margin-top:0">Configuration (modèle)</h2><p>Exporte les réglages (site, villes, gares, textes) et les horaires de bus dans un seul fichier, pour les réutiliser sur une autre installation. <b>Ne sont pas inclus</b> : les secrets (tokens, mot de passe, qui restent dans le <code>.env</code>), ni ce qui est propre à cette installation (admins Telegram, adresse du site, e-mail de contact). À l’import, ces trois réglages sont conservés.</p>
+ <p class="row"><a class="btn" href="/api/admin/export">⬇ Exporter la configuration</a><label class="btn" style="margin:0">⬆ Importer une configuration<input type="file" id="cimp" accept=".json,application/json" hidden></label></p></div>
+ <div class="card"><h2 style="margin-top:0">Secrets (fichier .env)</h2><p class="hint">Ces réglages ne sont pas modifiables ici, par sécurité. Modifie le fichier <code>.env</code> sur le serveur, puis redémarre (<code>docker compose up -d</code>).</p>
+ <table><tbody><tr><td>BOT_TOKEN / BOT_USERNAME</td><td>${o.bot.configured?'<span class="ok">✅ renseignés</span>':'<span class="bad">⚠️ manquants</span>'}</td></tr>
+ <tr><td>ADMIN_USER / ADMIN_PASSWORD</td><td><span class="ok">✅ renseignés</span></td></tr><tr><td>TUNNEL_TOKEN</td><td>${o.secrets.tunnel?'<span class="ok">✅ renseigné</span>':'<span class="mut">non utilisé par le site lui-même</span>'}</td></tr></tbody></table></div>`;
+ $('#cimp').onchange=async e=>{const f=e.target.files[0];if(!f)return;try{const j=JSON.parse(await f.text());
+  if(!confirm('Remplacer la configuration actuelle (réglages, gares, textes, horaires de bus) par celle du fichier ? Les annonces, les admins, l’adresse du site et l’e-mail de contact ne sont pas touchés.'))return;
+  await put('/api/admin/import',j,'POST');CONF=await api('/api/admin/config');BUS=null;toast('Configuration importée')}catch(err){toast('Import impossible : '+err.message,1)}}};
+
+fetch('/api/admin/me').then(r=>r.json()).then(m=>m.logged?start():loginView()).catch(loginView);
+</script></body></html>

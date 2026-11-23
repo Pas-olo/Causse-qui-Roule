@@ -1,0 +1,6 @@
+/* Ardoise : sombre, jaune moutarde, coins carrés */
+:root{--bg:#1d2328;--paper:#262e34;--ink:#eef1ee;--mut:#97a3a8;--line:#36414a;--g:#f4c542;--tint:#2f3a42;--cl:#f4c542;--on:#1d2328;--sig:#f4c542;--bd:#111518;--sh:none}
+body,h1,h2,h3,.tm,.btn,.btns a,nav button,input,select,textarea,.seats{font-family:'Space Grotesk',system-ui,sans-serif}
+h1,h2,h3{letter-spacing:-.02em}
+details.ad,.board,.bus,dialog,.btn,.btns a,input,select,textarea,.seats,nav div,nav button,.mail a{border-radius:6px}
+.filters select{border-radius:6px}
